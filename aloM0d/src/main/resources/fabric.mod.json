@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "aloM0d",
+  "version": "${version}",
+  "name": "aloM0d",
+  "description": "wrapper for almost all QOL mods that i like",
+  "authors": [],
+  "contact": {},
+  "license": "GPL-3.0",
+  "icon": "assets/aloM0d/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "fabric-datagen": [
+      "kpp.dev.aloM0d.client.aloM0dDataGenerator"
+    ],
+    "client": [
+      "kpp.dev.aloM0d.client.aloM0dClient"
+    ],
+    "main": [
+      "kpp.dev.aloM0d.aloM0d"
+    ]
+  },
+  "mixins": [
+    "aloM0d.mixins.json",
+    {
+      "config": "aloM0d.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-language-kotlin": ">=${kotlin_loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
