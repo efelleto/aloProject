@@ -1,6 +1,5 @@
 package kpp.dev.aloM0d.client.core.module.modules
 
-import kpp.dev.aloM0d.client.core.config.FallbackConfig
 import kpp.dev.aloM0d.client.core.event.ClientTickEvent
 import kpp.dev.aloM0d.client.core.mining.MiningQueue
 import kpp.dev.aloM0d.client.core.module.Module
@@ -12,7 +11,6 @@ import net.minecraft.core.BlockPos
 import net.minecraft.tags.TagKey
 import net.minecraft.world.phys.BlockHitResult
 import net.minecraft.world.phys.HitResult
-import net.minecraft.world.phys.Vec3
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.state.BlockState
 
@@ -31,10 +29,12 @@ object VeinMinerModule : Module(
     val debugHighlights: List<DebugHighlight>
         get() {
             if (!DebugModule.active) return emptyList()
+            val level = Minecraft.getInstance().level ?: return emptyList()
+            val veinTag = pendingVein?.veinTag ?: activeVeinTag ?: return emptyList()
 
-            return highlightedBlocks.map { pos ->
-                DebugHighlight(pos, highlightedProgress)
-            }
+            return highlightedBlocks
+                .filter { pos -> level.getBlockState(pos).`is`(veinTag) }
+                .map { pos -> DebugHighlight(pos, highlightedProgress) }
         }
 
     override fun onDisable() {
@@ -121,15 +121,6 @@ object VeinMinerModule : Module(
         val level = event.client.level ?: return
 
         if (!level.getBlockState(pending.root).isAir) return
-
-        if (!FallbackConfig.forceMultiplayerFallback && breakSingleplayerVein(event.client, pending)) {
-            pendingVein = null
-            activeVeinTag = null
-            highlightedBlocks = emptyList()
-            highlightedProgress = 0.0f
-            clearMirroredBreakOverlays(event.client.level)
-            return
-        }
 
         MiningQueue.enqueue(pending.blocks)
         activeVeinTag = pending.veinTag
@@ -224,31 +215,6 @@ object VeinMinerModule : Module(
         }
     }
 
-    private fun breakSingleplayerVein(client: Minecraft, pending: PendingVein): Boolean {
-        val clientLevel = client.level ?: return false
-        val clientPlayer = client.player ?: return false
-        val server = client.singleplayerServer ?: return false
-        val serverLevel = server.getLevel(clientLevel.dimension()) ?: return false
-        val serverPlayer = server.playerList.getPlayer(clientPlayer.uuid) ?: return false
-        val blocks = pending.blocks.map(BlockPos::immutable)
-
-        server.executeIfPossible {
-            val playerPosition = serverPlayer.position()
-
-            blocks.forEach { pos ->
-                val state = serverLevel.getBlockState(pos)
-
-                if (!isMineableVeinBlock(state, pending.veinTag, serverPlayer::hasCorrectToolForDrops)) return@forEach
-                if (!isWithinVeinBreakReach(playerPosition, pos)) return@forEach
-                if (!serverPlayer.mayInteract(serverLevel, pos)) return@forEach
-
-                serverPlayer.gameMode.destroyBlock(pos)
-            }
-        }
-
-        return true
-    }
-
     private fun isWithinRootReach(client: Minecraft, pos: BlockPos): Boolean {
         return MiningQueue.isWithinReach(client, pos)
     }
@@ -256,11 +222,7 @@ object VeinMinerModule : Module(
     private fun isWithinVeinBreakReach(client: Minecraft, pos: BlockPos): Boolean {
         val player = client.player ?: return false
 
-        return isWithinVeinBreakReach(player.position(), pos)
-    }
-
-    private fun isWithinVeinBreakReach(playerPosition: Vec3, pos: BlockPos): Boolean {
-        return pos.closerToCenterThan(playerPosition, VEIN_BREAK_REACH)
+        return pos.closerToCenterThan(player.position(), VEIN_BREAK_REACH)
     }
 
     private fun isMineableVeinBlock(

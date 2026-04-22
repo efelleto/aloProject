@@ -54,6 +54,6 @@ object DebugHighlightRenderer {
 
     private val HIGHLIGHT_COLOR = ARGB.color(150, 67, 209, 122)
     private val PROGRESS_COLOR = ARGB.color(240, 255, 225, 94)
-    private const val LINE_WIDTH = 2.0f
-    private const val PROGRESS_LINE_WIDTH = 4.0f
+    private const val LINE_WIDTH = 1.0f
+    private const val PROGRESS_LINE_WIDTH = 2.0f
 }
